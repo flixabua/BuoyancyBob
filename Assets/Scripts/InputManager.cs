@@ -17,7 +17,7 @@ public class InputManager : MonoBehaviour
     private TMP_Text DepthText;
     private TMP_Text JacketText;
     
-    
+    // important for force calculation
     private float currentAir = 0f;
     private float currentDepth = 10f;
     private float lastDepth = 10f;
@@ -27,12 +27,15 @@ public class InputManager : MonoBehaviour
     private float Mass = 80f;
     private float force = 0f;
     
+    // Game relevant data
+    public float AirInTank = 2400f;
+    private float currentPressure;
 
     private SerialPort serial = new SerialPort("COM11", 9600);
     // Start is called before the first frame update
     void Start()
     {
-        
+        currentPressure = 1f + (currentDepth / 10f);
         _rigidbody = GetComponent<Rigidbody>();
         AirText = air.GetComponent<TMP_Text>();
         DepthText = depth.GetComponent<TMP_Text>();
@@ -61,14 +64,16 @@ public class InputManager : MonoBehaviour
         }
     
         currentAir += data;
+        
         CalculateVolume();
         currentDepth = -_rigidbody.position.y + 10;
-        AirText.SetText("Current air in Lung/Jacket: {0}/{1}", currentAir, currentJacketAir);
+        AirText.SetText("Current air in Lung/Jacket/tank: {0}/{1}/{2}", currentAir, currentJacketAir, AirInTank);
         CalculateForce();
         DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
         
-        Debug.Log(data);
+        // Debug.Log(data);
         // MoveObject(data);
+        ConsumeAir(data);
         MoveObjectbyForce(force);
 
 
@@ -109,10 +114,26 @@ public class InputManager : MonoBehaviour
     {
         float new_pressure = 1f + (currentDepth / 10f);
         float old_pressure = 1f + (lastDepth / 10f);
+        currentPressure = new_pressure;
         currentAir = (old_pressure * currentAir) / new_pressure;
         currentJacketAir = (old_pressure * currentJacketAir) / new_pressure;
         additionalVolume = (old_pressure * additionalVolume) / new_pressure;
         lastDepth = currentDepth;
 
     }
+
+    void ConsumeAir(float data)
+    {
+        if (data > 0)
+        {
+            AirInTank -= (data / currentPressure);
+        }
+    }
+    
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        //Ouput the Collision to the console
+        Debug.Log("Collision : " + collision.gameObject.name);
+    }
+    
 }
