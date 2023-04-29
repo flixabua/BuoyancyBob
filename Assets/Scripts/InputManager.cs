@@ -72,10 +72,16 @@ public class InputManager : MonoBehaviour
         CalculateForce();
         DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
         if (data > 0)
+        {
+            //breathing in
             bubbles.enableEmission = false;
+        }
         else
+        {
+            //breathing out
             bubbles.enableEmission = true;
-        
+        }
+
         // Debug.Log(data);
         // MoveObject(data);
         ConsumeAir(data);
