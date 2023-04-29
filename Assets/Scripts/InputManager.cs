@@ -30,6 +30,7 @@ public class InputManager : MonoBehaviour
     // Game relevant data
     public float AirInTank = 2400f;
     private float currentPressure;
+    public ParticleSystem bubbles;
 
     private SerialPort serial = new SerialPort("COM11", 9600);
     // Start is called before the first frame update
@@ -70,6 +71,10 @@ public class InputManager : MonoBehaviour
         AirText.SetText("Current air in Lung/Jacket/tank: {0}/{1}/{2}", currentAir, currentJacketAir, AirInTank);
         CalculateForce();
         DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
+        if (data > 0)
+            bubbles.enableEmission = false;
+        else
+            bubbles.enableEmission = true;
         
         // Debug.Log(data);
         // MoveObject(data);
@@ -86,12 +91,13 @@ public class InputManager : MonoBehaviour
         if (value > 0)
         {
             value = value/12f;
-            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove; 
+            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
             // transform.position += Vector3.up*value;
         }else if (value < 0)
         {
             value = value/10f;
-            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove; 
+            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
+            bubbles.gameObject.SetActive(false);
             // transform.position += Vector3.up*value;
         }
     }
