@@ -4,6 +4,7 @@ using System.IO.Ports;
 using System.Numerics;
 using TMPro;
 using Vector3 = UnityEngine.Vector3;
+using Random = System.Random;
 
 public class InputManager : MonoBehaviour
 {
@@ -31,6 +32,14 @@ public class InputManager : MonoBehaviour
     public float AirInTank = 2400f;
     private float currentPressure;
     public ParticleSystem bubbles;
+    
+    //sound data
+    private bool changed = false;
+    public AudioSource inhale_sound;
+    public AudioClip[] inhale_sounds;
+    public AudioSource exhale_sound;
+    public AudioClip[] exhale_sounds;
+    private Random rng = new Random();
 
     private SerialPort serial = new SerialPort("COM11", 9600);
     // Start is called before the first frame update
@@ -57,6 +66,8 @@ public class InputManager : MonoBehaviour
         try
         {
             data = float.Parse(serial.ReadLine()) / 1000000;
+            if ((lastData <= 0 && data > 0) || (lastData > 0 && data <= 0))
+                changed = true;
             lastData = data;
         }
         catch (TimeoutException)
@@ -71,17 +82,28 @@ public class InputManager : MonoBehaviour
         AirText.SetText("Current air in Lung/Jacket/tank: {0}/{1}/{2}", currentAir, currentJacketAir, AirInTank);
         CalculateForce();
         DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
-        if (data > 0)
+ 
+        if (changed)
         {
-            //breathing in
-            bubbles.enableEmission = false;
+            
+            if (data > 0)
+            {
+                //breathing in
+                bubbles.enableEmission = false;
+                inhale_sound.clip = inhale_sounds[rng.Next(inhale_sounds.Length)];
+                inhale_sound.Play();
+                Debug.Log("inhaling");
+            }
+            else
+            {
+                //breathing out
+                bubbles.enableEmission = true;
+                exhale_sound.clip = exhale_sounds[rng.Next(exhale_sounds.Length)];
+                exhale_sound.Play();
+                Debug.Log("exhaling");
+            }
+            changed = false;
         }
-        else
-        {
-            //breathing out
-            bubbles.enableEmission = true;
-        }
-
         // Debug.Log(data);
         // MoveObject(data);
         ConsumeAir(data);
