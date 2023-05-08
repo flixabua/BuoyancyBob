@@ -150,6 +150,7 @@ public class InputManager : MonoBehaviour
         float old_pressure = 1f + (lastDepth / 10f);
         currentPressure = new_pressure;
         currentAir = (old_pressure * currentAir) / new_pressure;
+        Debug.Log(currentAir);
         currentJacketAir = (old_pressure * currentJacketAir) / new_pressure;
         additionalVolume = (old_pressure * additionalVolume) / new_pressure;
         lastDepth = currentDepth;
