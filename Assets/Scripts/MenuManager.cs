@@ -90,7 +90,7 @@ public class MenuManager : MonoBehaviour
         {
             //exit game
             Debug.Log("Closing game");
-            LoadLevel(99);
+            QuitGame();
         }
 
         if (transform.position.y < -25)
@@ -105,6 +105,11 @@ public class MenuManager : MonoBehaviour
     {
         serial.Close();
         StartCoroutine(LoadLevel(1));
+    }
+    public void QuitGame()
+    {
+        serial.Close();
+        StartCoroutine(LoadLevel(99));
     }
 
     IEnumerator LoadLevel(int levelindex)
