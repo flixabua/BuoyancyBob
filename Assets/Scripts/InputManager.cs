@@ -1,23 +1,25 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using System.IO.Ports;
 using System.Numerics;
 using TMPro;
+using UnityEngine.SceneManagement;
 using Vector3 = UnityEngine.Vector3;
 using Random = System.Random;
+using UnityEngine.UI;
 
 public class InputManager : MonoBehaviour
 {
     private float ControllerValue;
     public int AmountToMove;
-    public GameObject air;
-    public GameObject depth;
-    private Rigidbody _rigidbody;
+    private Rigidbody2D _rigidbody;
     private float lastData = 0f;
+    /*
     private TMP_Text AirText;
     private TMP_Text DepthText;
     private TMP_Text JacketText;
-    
+    */
     // important for force calculation
     private float currentAir = 0f;
     private float currentDepth = 10f;
@@ -30,6 +32,7 @@ public class InputManager : MonoBehaviour
     
     // Game relevant data
     public float AirInTank = 2400f;
+    private float AirStart;
     private float currentPressure;
     public ParticleSystem bubbles;
     
@@ -42,20 +45,45 @@ public class InputManager : MonoBehaviour
     private Random rng = new Random();
 
     private SerialPort serial = new SerialPort("COM11", 9600);
+    
+    //gameplay relevant data
+    public TMP_Text Score;
+    public Slider oxygenMeter;
+    private int score = 0;
+    private float timer;
+    public Animator transition;
+    public float transitiontime = 1f;
+    
+    
+    
     // Start is called before the first frame update
     void Start()
     {
+        ScoreController.control.resetScore();
         currentPressure = 1f + (currentDepth / 10f);
-        _rigidbody = GetComponent<Rigidbody>();
+        _rigidbody = GetComponent<Rigidbody2D>();
+        AirStart = AirInTank;
+        Score.SetText("{0} m", score);
+        /*
         AirText = air.GetComponent<TMP_Text>();
         DepthText = depth.GetComponent<TMP_Text>();
         AirText.SetText("Current air in Lung: {0}", currentAir);
         DepthText.SetText("Current Depth: {0}", currentDepth);
+        */
     }
 
     // Update is called once per frame
     void Update()
-    {
+    {   
+        timer += Time.deltaTime;
+        if (timer > 1f)
+        {
+            score += 1;
+            Score.SetText("{0} m", score);
+            timer = 0f;
+            ScoreController.control.addScore(1);
+        }
+        
         if (!serial.IsOpen)
         {
             serial.Open();
@@ -74,14 +102,15 @@ public class InputManager : MonoBehaviour
         {
             data = lastData;
         }
-    
+        
         currentAir += data;
         
-        CalculateVolume();
+        // CalculateVolume();
         currentDepth = -_rigidbody.position.y + 10;
-        AirText.SetText("Current air in Lung/Jacket/tank: {0}/{1}/{2}", currentAir, currentJacketAir, AirInTank);
-        CalculateForce();
-        DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
+        // AirText.SetText("Current air in Lung/Jacket/tank: {0}/{1}/{2}", currentAir, currentJacketAir, AirInTank);
+        // CalculateForce();
+        // DepthText.SetText("Current Depth: {0} force: {1}", currentDepth, force);
+        
  
         if (changed)
         {
@@ -105,29 +134,33 @@ public class InputManager : MonoBehaviour
             changed = false;
         }
         // Debug.Log(data);
-        // MoveObject(data);
+        MoveObject(data);
         ConsumeAir(data);
-        MoveObjectbyForce(force);
-
+        // MoveObjectbyForce(force);
 
     }
 
     void MoveObject(float value)
     {
         currentDepth = -_rigidbody.position.y + 10;
-        Debug.Log(value);
+        value *= 300;
         if (value > 0)
         {
             value = value/12f;
-            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
-            // transform.position += Vector3.up*value;
+            // _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
+            transform.position += Vector3.up*value;
         }else if (value < 0)
         {
             value = value/10f;
-            _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
-            bubbles.gameObject.SetActive(false);
-            // transform.position += Vector3.up*value;
+            // _rigidbody.velocity = new Vector3(0.0f, value, 0.0f) * AmountToMove;
+            transform.position += Vector3.up*value;
         }
+
+        if (transform.position.y < -30)
+            transform.position = new Vector3(transform.position.x, -30f, -90f);
+        
+        if (transform.position.y > 30)
+            transform.position = new Vector3(transform.position.x, 30f, -90f);
     }
 
     void MoveObjectbyForce(float force)
@@ -150,7 +183,6 @@ public class InputManager : MonoBehaviour
         float old_pressure = 1f + (lastDepth / 10f);
         currentPressure = new_pressure;
         currentAir = (old_pressure * currentAir) / new_pressure;
-        Debug.Log(currentAir);
         currentJacketAir = (old_pressure * currentJacketAir) / new_pressure;
         additionalVolume = (old_pressure * additionalVolume) / new_pressure;
         lastDepth = currentDepth;
@@ -161,14 +193,45 @@ public class InputManager : MonoBehaviour
     {
         if (data > 0)
         {
-            AirInTank -= (data / currentPressure);
+            data *= 50;
+            AirInTank -= data;
+            // AirInTank -= (data / currentPressure);
+            updateOxygenMeter();
+            if (AirInTank < 50)
+            {
+                LoadNextLevel();
+            }
         }
     }
     
-    void OnCollisionEnter2D(Collision2D collision)
+    void OnTriggerEnter2D(Collider2D collision)
     {
         //Ouput the Collision to the console
         Debug.Log("Collision : " + collision.gameObject.name);
+        ConsumeAir(5);
+        
+    }
+
+    void updateOxygenMeter()
+    {
+        oxygenMeter.value = AirInTank/AirStart;
+    }
+    
+    public void LoadNextLevel()
+    {
+        
+        StartCoroutine(LoadLevel(2));
+    }
+
+    IEnumerator LoadLevel(int levelindex)
+    {
+        transition.SetTrigger("Start");
+        yield return new WaitForSeconds(transitiontime);
+        if (levelindex == 99)
+            Application.Quit();
+        
+        serial.Close();
+        SceneManager.LoadScene(levelindex);
     }
     
 }

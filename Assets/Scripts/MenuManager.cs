@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO.Ports;
+using TMPro;
 using UnityEngine.SceneManagement;
 using Random = System.Random;
 
@@ -24,12 +25,17 @@ public class MenuManager : MonoBehaviour
     public AudioSource exhale_sound;
     public AudioClip[] exhale_sounds;
     private Random rng = new Random();
+    public TMP_Text Score;
 
     // Start is called before the first frame update
     void Start()
     {
 
         _rigidbody = GetComponent<Rigidbody>();
+        if (Score != null)
+        {
+            Score.SetText("{0} m", ScoreController.control.getScore());
+        }
     }
 
 
@@ -84,7 +90,7 @@ public class MenuManager : MonoBehaviour
         {
             //exit game
             Debug.Log("Closing game");
-            Application.Quit();
+            LoadLevel(99);
         }
 
         if (transform.position.y < -25)
@@ -97,7 +103,7 @@ public class MenuManager : MonoBehaviour
 
     public void LoadNextLevel()
     {
-        
+        serial.Close();
         StartCoroutine(LoadLevel(1));
     }
 
@@ -105,6 +111,8 @@ public class MenuManager : MonoBehaviour
     {
         transition.SetTrigger("Start");
         yield return new WaitForSeconds(transitiontime);
+        if (levelindex == 99)
+            Application.Quit();
         SceneManager.LoadScene(levelindex);
     }
     
